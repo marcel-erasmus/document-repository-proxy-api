@@ -16,6 +16,7 @@
 	<properties>
 		<java.version>17</java.version>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -47,6 +48,22 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- START: FIREBASE -->
+		<dependency>
+			<groupId>com.google.firebase</groupId>
+			<artifactId>firebase-admin</artifactId>
+			<version>6.14.0</version>
+		</dependency>
+		<!-- END: FIREBASE -->
+
+		<!-- START: AWS -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk</artifactId>
+			<version>1.11.163</version>
+		</dependency>
+		<!-- END: AWS -->
 	</dependencies>
 
 	<build>
@@ -65,5 +82,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>

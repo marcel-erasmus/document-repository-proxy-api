@@ -1,15 +1,17 @@
-package com.voidworks.document.repo;
+package com.voidworks.drc;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 @Slf4j
+@EnableMongoRepositories
 @SpringBootApplication
-public class DocumentRepoApplication {
+public class DrcApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(DocumentRepoApplication.class, args);
+		SpringApplication.run(DrcApplication.class, args);
 
 		log.info(
 			"\n\nA creation by..." +
