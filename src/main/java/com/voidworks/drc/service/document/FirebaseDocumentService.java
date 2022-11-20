@@ -18,7 +18,6 @@ import org.springframework.web.context.annotation.RequestScope;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.channels.Channels;
-import java.util.UUID;
 
 @Slf4j
 @RequestScope
@@ -38,6 +37,11 @@ public class FirebaseDocumentService implements DocumentService {
     }
 
     @Override
+    public void deleteDocument(String key) throws Exception {
+        throw new ExecutionControl.NotImplementedException("Not yet implemented for Firebase!");
+    }
+
+    @Override
     public InputStream downloadDocument(String key) {
         String projectId = firebaseConfig.getProjectId();
 
@@ -52,7 +56,7 @@ public class FirebaseDocumentService implements DocumentService {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
 
-            throw new StorageProviderConfigurationException(UUID.randomUUID().toString(), e.getMessage());
+            throw new StorageProviderConfigurationException(e.getMessage());
         }
 
         Storage storage = storageOptions.getService();

@@ -1,6 +1,7 @@
 package com.voidworks.drc.controller;
 
 import com.voidworks.drc.enums.storage.StorageProvider;
+import com.voidworks.drc.exception.DocumentMetadataNotFoundException;
 import com.voidworks.drc.model.api.DocumentPutApiRequest;
 import com.voidworks.drc.model.mapper.PojoMapper;
 import com.voidworks.drc.model.service.DocumentMetadataBean;
@@ -56,15 +57,26 @@ public class DocumentController {
         return ResponseEntity.ok(savedDocumentMetadataBean);
     }
 
-    @GetMapping("/documents/stream/{id}")
-    public ResponseEntity<StreamingResponseBody> streamDocument(@PathVariable("id") String id) throws Exception {
-        Optional<DocumentMetadataBean> documentMetadataBeanOptional = documentMetadataService.findById(id);
+    @DeleteMapping("/documents/{id}")
+    public ResponseEntity<String> deleteDocument(@PathVariable("id") String id) throws Exception {
+        DocumentMetadataBean documentMetadataBean = getDocumentMetadata(id);
 
-        if (documentMetadataBeanOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        DocumentService documentService = getDocumentService(documentMetadataBean.getStorageProvider());
+
+        if (documentService == null) {
+            return ResponseEntity.badRequest().build();
         }
 
-        DocumentMetadataBean documentMetadataBean = documentMetadataBeanOptional.get();
+        documentService.deleteDocument(documentMetadataBean.getKey());
+
+        documentMetadataService.delete(id);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/documents/stream/{id}")
+    public ResponseEntity<StreamingResponseBody> streamDocument(@PathVariable("id") String id) throws Exception {
+        DocumentMetadataBean documentMetadataBean = getDocumentMetadata(id);
 
         DocumentService documentService = getDocumentService(documentMetadataBean.getStorageProvider());
 
@@ -102,6 +114,16 @@ public class DocumentController {
         }
 
         return null;
+    }
+
+    private DocumentMetadataBean getDocumentMetadata(String id) {
+        Optional<DocumentMetadataBean> documentMetadataBeanOptional = documentMetadataService.findById(id);
+
+        if (documentMetadataBeanOptional.isEmpty()) {
+            throw new DocumentMetadataNotFoundException(id);
+        }
+
+        return documentMetadataBeanOptional.get();
     }
 
 }

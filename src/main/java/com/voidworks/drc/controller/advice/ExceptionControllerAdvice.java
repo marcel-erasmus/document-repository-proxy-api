@@ -1,5 +1,6 @@
 package com.voidworks.drc.controller.advice;
 
+import com.voidworks.drc.exception.DocumentMetadataNotFoundException;
 import com.voidworks.drc.exception.StorageProviderConfigurationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +34,15 @@ public class ExceptionControllerAdvice extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(
                 String.format("Error with storage provider configuration! Reference ID: %s", e.getReferenceId()), new HttpHeaders(), HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler({ DocumentMetadataNotFoundException.class })
+    public ResponseEntity<Object> handleDocumentMetadataNotFoundException(DocumentMetadataNotFoundException e) {
+        log.error(e.getMessage(), e);
+
+        return new ResponseEntity<>(
+                String.format(e.getMessage() + " Reference ID: %s", e.getReferenceId()), new HttpHeaders(), HttpStatus.BAD_REQUEST
         );
     }
     
