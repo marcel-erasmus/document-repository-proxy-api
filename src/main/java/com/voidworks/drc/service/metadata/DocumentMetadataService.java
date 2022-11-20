@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -35,7 +36,7 @@ public class DocumentMetadataService {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
 
-            throw new DatabasePersistenceException();
+            throw new DatabasePersistenceException(UUID.randomUUID().toString(), e.getMessage());
         }
     }
 

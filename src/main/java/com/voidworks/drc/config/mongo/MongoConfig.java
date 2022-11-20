@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 @Configuration
-public class SimpleMongoConfig {
+public class MongoConfig {
 
     @Value("${db.mongo.connection-string}")
     private String connectionString;

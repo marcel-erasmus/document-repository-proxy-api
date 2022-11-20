@@ -1,7 +1,10 @@
 package com.voidworks.drc.controller;
 
 import com.voidworks.drc.enums.storage.StorageProvider;
+import com.voidworks.drc.model.api.DocumentPutApiRequest;
+import com.voidworks.drc.model.mapper.PojoMapper;
 import com.voidworks.drc.model.service.DocumentMetadataBean;
+import com.voidworks.drc.model.service.DocumentPutRequestBean;
 import com.voidworks.drc.service.document.DocumentService;
 import com.voidworks.drc.service.document.FirebaseDocumentService;
 import com.voidworks.drc.service.document.S3DocumentService;
@@ -10,10 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.*;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.InputStream;
@@ -25,12 +25,35 @@ public class DocumentController {
 
     private final ApplicationContext applicationContext;
     private final DocumentMetadataService documentMetadataService;
+    private final PojoMapper pojoMapper;
 
     @Autowired
     public DocumentController(ApplicationContext applicationContext,
-                              DocumentMetadataService documentMetadataService) {
+                              DocumentMetadataService documentMetadataService,
+                              PojoMapper pojoMapper) {
         this.applicationContext = applicationContext;
         this.documentMetadataService = documentMetadataService;
+        this.pojoMapper = pojoMapper;
+    }
+
+    @PutMapping("/documents")
+    public ResponseEntity<DocumentMetadataBean> uploadDocument(DocumentPutApiRequest documentPutApiRequest) throws Exception {
+        DocumentService documentService = getDocumentService(documentPutApiRequest.getStorageProvider());
+
+        if (documentService == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        DocumentMetadataBean documentMetadataBean = pojoMapper.map(documentPutApiRequest, new DocumentMetadataBean());
+
+        DocumentMetadataBean savedDocumentMetadataBean = documentMetadataService.save(documentMetadataBean);
+
+        DocumentPutRequestBean documentPutRequestBean = pojoMapper.map(documentPutApiRequest, new DocumentPutRequestBean());
+        documentPutRequestBean.setFile(documentPutApiRequest.getFile().getInputStream());
+
+        documentService.uploadDocument(documentPutRequestBean);
+
+        return ResponseEntity.ok(savedDocumentMetadataBean);
     }
 
     @GetMapping("/documents/stream/{id}")

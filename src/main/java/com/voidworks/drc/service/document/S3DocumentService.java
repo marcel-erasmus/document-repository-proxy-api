@@ -1,12 +1,17 @@
 package com.voidworks.drc.service.document;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3Object;
 import com.voidworks.drc.config.storage.s3.S3Config;
+import com.voidworks.drc.model.service.DocumentPutRequestBean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.RequestScope;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.InputStream;
 
@@ -15,21 +20,42 @@ import java.io.InputStream;
 @Service
 public class S3DocumentService implements DocumentService {
 
-    private S3Config s3Config;
-    private AmazonS3 s3Client;
+    private final S3Config s3Config;
+    private final S3Client s3Client;
 
     @Autowired
     public S3DocumentService(S3Config s3Config,
-                             AmazonS3 s3Client) {
+                             S3Client s3Client) {
         this.s3Config = s3Config;
         this.s3Client = s3Client;
     }
 
     @Override
-    public InputStream downloadDocument(String key) {
-        S3Object s3object = s3Client.getObject(s3Config.getBucket(), key);
+    public void uploadDocument(DocumentPutRequestBean documentPutRequestBean) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(s3Config.getBucket())
+                    .key(documentPutRequestBean.getKey())
+                    .build();
 
-        return s3object.getObjectContent();
+            PutObjectResponse putObjectResponse = s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(documentPutRequestBean.getFile(), documentPutRequestBean.getFile().available()));
+
+            log.debug(putObjectResponse.eTag());
+        } catch (S3Exception e) {
+            log.error(e.awsErrorDetails().errorMessage(), e);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public InputStream downloadDocument(String key) {
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(s3Config.getBucket())
+                .key(key)
+                .build();
+
+        return s3Client.getObject(getObjectRequest);
     }
 
 }
