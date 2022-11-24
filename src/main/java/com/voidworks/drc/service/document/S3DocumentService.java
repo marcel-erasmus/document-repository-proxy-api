@@ -1,6 +1,8 @@
 package com.voidworks.drc.service.document;
 
 import com.voidworks.drc.config.storage.s3.S3Config;
+import com.voidworks.drc.exception.DocumentDeleteException;
+import com.voidworks.drc.exception.DocumentUploadException;
 import com.voidworks.drc.model.service.DocumentPutRequestBean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,19 +43,29 @@ public class S3DocumentService implements DocumentService {
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(documentPutRequestBean.getFile(), documentPutRequestBean.getFile().available()));
         } catch (S3Exception e) {
             log.error(e.awsErrorDetails().errorMessage(), e);
+
+            throw new DocumentUploadException(e);
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Failed to upload document to S3! {}", e.getMessage(), e);
+
+            throw new DocumentUploadException(e);
         }
     }
 
     @Override
     public void deleteDocument(String key) {
-        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(s3Config.getBucket())
-                .key(key)
-                .build();
+        try {
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(s3Config.getBucket())
+                    .key(key)
+                    .build();
 
-        s3Client.deleteObject(deleteObjectRequest);
+            s3Client.deleteObject(deleteObjectRequest);
+        } catch (Exception e) {
+            log.error("Could not delete file from S3! {}", e.getMessage(), e);
+
+            throw new DocumentDeleteException(e);
+        }
     }
 
     @Override
