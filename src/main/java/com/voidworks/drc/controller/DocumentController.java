@@ -2,7 +2,9 @@ package com.voidworks.drc.controller;
 
 import com.voidworks.drc.enums.storage.StorageProvider;
 import com.voidworks.drc.exception.DocumentMetadataNotFoundException;
-import com.voidworks.drc.model.api.DocumentPutApiRequest;
+import com.voidworks.drc.exception.StorageProviderNotSupportedException;
+import com.voidworks.drc.model.api.request.DocumentPutApiRequest;
+import com.voidworks.drc.model.api.response.ApiResponse;
 import com.voidworks.drc.model.mapper.PojoMapper;
 import com.voidworks.drc.model.service.DocumentMetadataBean;
 import com.voidworks.drc.model.service.DocumentPutRequestBean;
@@ -12,12 +14,14 @@ import com.voidworks.drc.service.document.S3DocumentService;
 import com.voidworks.drc.service.metadata.DocumentMetadataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.Optional;
 
 @RestController
@@ -38,12 +42,8 @@ public class DocumentController {
     }
 
     @PutMapping("/documents")
-    public ResponseEntity<DocumentMetadataBean> uploadDocument(DocumentPutApiRequest documentPutApiRequest) throws Exception {
+    public ResponseEntity<ApiResponse<DocumentMetadataBean>> uploadDocument(DocumentPutApiRequest documentPutApiRequest) throws Exception {
         DocumentService documentService = getDocumentService(documentPutApiRequest.getStorageProvider());
-
-        if (documentService == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         DocumentMetadataBean documentMetadataBean = pojoMapper.map(documentPutApiRequest, new DocumentMetadataBean());
 
@@ -54,18 +54,18 @@ public class DocumentController {
 
         documentService.uploadDocument(documentPutRequestBean);
 
-        return ResponseEntity.ok(savedDocumentMetadataBean);
+        ApiResponse<DocumentMetadataBean> apiResponse = ApiResponse.<DocumentMetadataBean>builder()
+                .data(Collections.singletonList(savedDocumentMetadataBean))
+                .build();
+
+        return ResponseEntity.ok(apiResponse);
     }
 
     @DeleteMapping("/documents/{id}")
-    public ResponseEntity<String> deleteDocument(@PathVariable("id") String id) throws Exception {
+    public ResponseEntity<Void> deleteDocument(@PathVariable("id") String id) throws Exception {
         DocumentMetadataBean documentMetadataBean = getDocumentMetadata(id);
 
         DocumentService documentService = getDocumentService(documentMetadataBean.getStorageProvider());
-
-        if (documentService == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         documentService.deleteDocument(documentMetadataBean.getKey());
 
@@ -80,11 +80,9 @@ public class DocumentController {
 
         DocumentService documentService = getDocumentService(documentMetadataBean.getStorageProvider());
 
-        if (documentService == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
         InputStream inputStream = documentService.downloadDocument(documentMetadataBean.getKey());
+
+        InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
 
         MediaType mediaType = getContentType(documentMetadataBean.getContentType());
 
@@ -95,7 +93,7 @@ public class DocumentController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                 .contentType(mediaType)
-                .body(outputStream -> FileCopyUtils.copy(inputStream, outputStream));
+                .body(outputStream -> FileCopyUtils.copy(inputStreamResource.getInputStream(), outputStream));
     }
 
     private MediaType getContentType(String contentType) {
@@ -113,7 +111,7 @@ public class DocumentController {
             return applicationContext.getBean(FirebaseDocumentService.class);
         }
 
-        return null;
+        throw new StorageProviderNotSupportedException(storageProvider);
     }
 
     private DocumentMetadataBean getDocumentMetadata(String id) {

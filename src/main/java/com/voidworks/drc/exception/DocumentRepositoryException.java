@@ -9,16 +9,27 @@ import java.util.UUID;
 @Getter
 public class DocumentRepositoryException extends RuntimeException {
 
-    protected final String referenceId;
-    protected final String message;
+    protected String referenceId;
+    protected String message;
+    protected Exception exception;
 
-    DocumentRepositoryException(String message) {
-        super();
-
-        this.referenceId = UUID.randomUUID().toString();
+    DocumentRepositoryException(String referenceId, String message, Exception exception) {
+        this.referenceId = referenceId;
         this.message = message;
 
+        if (exception != null) {
+            log.error(exception.getMessage(), exception);
+        }
+
         log.error("Reference ID: {}, Message: {}", referenceId, message);
+    }
+
+    DocumentRepositoryException(String message, Exception exception) {
+        this(UUID.randomUUID().toString(), message, exception);
+    }
+
+    DocumentRepositoryException(String message) {
+        this(UUID.randomUUID().toString(), message, null);
     }
 
 }

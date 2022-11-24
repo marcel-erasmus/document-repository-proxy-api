@@ -1,4 +1,4 @@
-package com.voidworks.drc.model.api;
+package com.voidworks.drc.model.api.request;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
