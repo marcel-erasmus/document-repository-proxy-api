@@ -1,4 +1,6 @@
-package com.voidworks.drc.exception;
+package com.voidworks.drc.exception.metadata;
+
+import com.voidworks.drc.exception.DocumentRepositoryException;
 
 public class DocumentMetadataNotFoundException extends DocumentRepositoryException {
 

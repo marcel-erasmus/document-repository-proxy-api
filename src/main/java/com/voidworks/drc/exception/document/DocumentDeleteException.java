@@ -1,4 +1,6 @@
-package com.voidworks.drc.exception;
+package com.voidworks.drc.exception.document;
+
+import com.voidworks.drc.exception.DocumentRepositoryException;
 
 public class DocumentDeleteException extends DocumentRepositoryException {
 

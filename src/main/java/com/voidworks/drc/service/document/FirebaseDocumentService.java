@@ -4,9 +4,10 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.*;
 import com.voidworks.drc.config.storage.firebase.FirebaseConfig;
-import com.voidworks.drc.exception.DocumentDeleteException;
-import com.voidworks.drc.exception.DocumentUploadException;
-import com.voidworks.drc.exception.StorageProviderConfigurationException;
+import com.voidworks.drc.enums.storage.StorageProvider;
+import com.voidworks.drc.exception.document.DocumentDeleteException;
+import com.voidworks.drc.exception.document.DocumentUploadException;
+import com.voidworks.drc.exception.storage.StorageProviderConfigurationException;
 import com.voidworks.drc.model.service.DocumentPutRequestBean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,9 +51,9 @@ public class FirebaseDocumentService implements DocumentService {
             storage.create(blobInfo, Files.readAllBytes(file.toPath()));
 
             if ( file.delete() ) {
-                log.info("Successfully deleted temporary file for upload to Firebase!");
+                log.debug("Successfully deleted temporary file for upload to Firebase!");
             } else {
-                log.info("Deletion of temporary file for upload to Firebase failed! It might need to be manually deleted!");
+                log.debug("Deletion of temporary file for upload to Firebase failed! It might need to be manually deleted!");
             }
         } catch (Exception e) {
             log.error("Failed to upload document to Firebase! {}", e.getMessage(), e);
@@ -119,12 +120,12 @@ public class FirebaseDocumentService implements DocumentService {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
 
-            throw new StorageProviderConfigurationException(e.getMessage());
+            throw new StorageProviderConfigurationException(StorageProvider.FIREBASE.name(), e);
         }
 
         Storage storage = storageOptions.getService();
 
-        log.info("Firebase client instantiated! Took [{}] ms.", System.currentTimeMillis() - timeStarted);
+        log.debug("Firebase client instantiated! Took [{}] ms.", System.currentTimeMillis() - timeStarted);
 
         return storage;
     }

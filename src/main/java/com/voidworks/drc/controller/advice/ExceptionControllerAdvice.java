@@ -1,8 +1,8 @@
 package com.voidworks.drc.controller.advice;
 
-import com.voidworks.drc.exception.DocumentMetadataNotFoundException;
-import com.voidworks.drc.exception.StorageProviderConfigurationException;
-import com.voidworks.drc.exception.StorageProviderNotSupportedException;
+import com.voidworks.drc.exception.metadata.DocumentMetadataNotFoundException;
+import com.voidworks.drc.exception.storage.StorageProviderConfigurationException;
+import com.voidworks.drc.exception.storage.StorageProviderNotSupportedException;
 import com.voidworks.drc.model.api.response.BaseApiResponse;
 import com.voidworks.drc.model.api.error.Error;
 import lombok.extern.slf4j.Slf4j;
@@ -55,7 +55,7 @@ public class ExceptionControllerAdvice extends ResponseEntityExceptionHandler {
     public ResponseEntity<BaseApiResponse> handleStorageProviderConfigurationException(StorageProviderConfigurationException e) {
         log.error(e.getMessage(), e);
 
-        Error error = new Error(e.getReferenceId(), "Error with storage provider configuration!");
+        Error error = new Error(e.getReferenceId(), String.format("Error with storage provider configuration for [%s]!", e.getStorageProvider()));
 
         return getApiResponse(Collections.singletonList(error));
     }

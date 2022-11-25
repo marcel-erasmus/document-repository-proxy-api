@@ -1,14 +1,16 @@
 package com.voidworks.drc.service.metadata;
 
-import com.voidworks.drc.exception.DatabasePersistenceException;
-import com.voidworks.drc.model.document.DocumentMetadataDocument;
+import com.voidworks.drc.exception.database.DatabasePersistenceException;
+import com.voidworks.drc.model.database.DocumentMetadataDocument;
 import com.voidworks.drc.model.mapper.PojoMapper;
 import com.voidworks.drc.model.service.DocumentMetadataBean;
 import com.voidworks.drc.repository.DocumentMetadataRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 @Slf4j
@@ -31,11 +33,16 @@ public class DocumentMetadataService {
                     pojoMapper.map(documentMetadataBean, new DocumentMetadataDocument())
             );
 
-            return pojoMapper.map(documentMetadataDocument, new DocumentMetadataBean());
+            DocumentMetadataBean resultBean = pojoMapper.map(documentMetadataDocument, new DocumentMetadataBean());
+            if (CollectionUtils.isEmpty(resultBean.getReferences())) {
+                resultBean.setReferences(new HashMap<>());
+            }
+
+            return resultBean;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
 
-            throw new DatabasePersistenceException(e.getMessage());
+            throw new DatabasePersistenceException(e.getMessage(), e);
         }
     }
 
@@ -50,9 +57,12 @@ public class DocumentMetadataService {
             return Optional.empty();
         }
 
-        return Optional.of(
-                pojoMapper.map(documentMetadataDocument.get(), new DocumentMetadataBean())
-        );
+        DocumentMetadataBean resultBean = pojoMapper.map(documentMetadataDocument.get(), new DocumentMetadataBean());
+        if (CollectionUtils.isEmpty(resultBean.getReferences())) {
+            resultBean.setReferences(new HashMap<>());
+        }
+
+        return Optional.of(resultBean);
     }
 
 }

@@ -40,7 +40,7 @@ public class S3Config {
                 .credentialsProvider(StaticCredentialsProvider.create(awsBasicCredentials))
                 .build();
 
-        log.info("S3 client instantiated! Took [{}] ms.", System.currentTimeMillis() - timeStarted);
+        log.debug("S3 client instantiated! Took [{}] ms.", System.currentTimeMillis() - timeStarted);
 
         return s3Client;
     }

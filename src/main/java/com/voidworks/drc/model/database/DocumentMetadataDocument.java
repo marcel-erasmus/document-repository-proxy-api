@@ -1,4 +1,4 @@
-package com.voidworks.drc.model.document;
+package com.voidworks.drc.model.database;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

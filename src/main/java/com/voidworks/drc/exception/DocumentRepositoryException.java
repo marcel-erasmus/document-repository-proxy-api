@@ -13,7 +13,7 @@ public class DocumentRepositoryException extends RuntimeException {
     protected String message;
     protected Exception exception;
 
-    DocumentRepositoryException(String referenceId, String message, Exception exception) {
+    public DocumentRepositoryException(String referenceId, String message, Exception exception) {
         this.referenceId = referenceId;
         this.message = message;
 
@@ -24,11 +24,11 @@ public class DocumentRepositoryException extends RuntimeException {
         log.error("Reference ID: {}, Message: {}", referenceId, message);
     }
 
-    DocumentRepositoryException(String message, Exception exception) {
+    public DocumentRepositoryException(String message, Exception exception) {
         this(UUID.randomUUID().toString(), message, exception);
     }
 
-    DocumentRepositoryException(String message) {
+    public DocumentRepositoryException(String message) {
         this(UUID.randomUUID().toString(), message, null);
     }
 

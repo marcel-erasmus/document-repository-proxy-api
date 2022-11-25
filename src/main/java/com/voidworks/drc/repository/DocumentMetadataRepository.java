@@ -1,6 +1,6 @@
 package com.voidworks.drc.repository;
 
-import com.voidworks.drc.model.document.DocumentMetadataDocument;
+import com.voidworks.drc.model.database.DocumentMetadataDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

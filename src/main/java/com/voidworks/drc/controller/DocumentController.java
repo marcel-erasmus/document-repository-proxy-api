@@ -1,8 +1,8 @@
 package com.voidworks.drc.controller;
 
 import com.voidworks.drc.enums.storage.StorageProvider;
-import com.voidworks.drc.exception.DocumentMetadataNotFoundException;
-import com.voidworks.drc.exception.StorageProviderNotSupportedException;
+import com.voidworks.drc.exception.metadata.DocumentMetadataNotFoundException;
+import com.voidworks.drc.exception.storage.StorageProviderNotSupportedException;
 import com.voidworks.drc.model.api.request.DocumentPutApiRequest;
 import com.voidworks.drc.model.api.response.ApiResponse;
 import com.voidworks.drc.model.mapper.PojoMapper;
@@ -41,7 +41,7 @@ public class DocumentController {
         this.pojoMapper = pojoMapper;
     }
 
-    @PutMapping("/documents")
+    @PutMapping("/v1.0/documents")
     public ResponseEntity<ApiResponse<DocumentMetadataBean>> uploadDocument(DocumentPutApiRequest documentPutApiRequest) throws Exception {
         DocumentService documentService = getDocumentService(documentPutApiRequest.getStorageProvider());
 
@@ -50,6 +50,7 @@ public class DocumentController {
         DocumentMetadataBean savedDocumentMetadataBean = documentMetadataService.save(documentMetadataBean);
 
         DocumentPutRequestBean documentPutRequestBean = pojoMapper.map(documentPutApiRequest, new DocumentPutRequestBean());
+        documentPutRequestBean.setKey(savedDocumentMetadataBean.getId() + "");
         documentPutRequestBean.setFile(documentPutApiRequest.getFile().getInputStream());
 
         documentService.uploadDocument(documentPutRequestBean);
@@ -61,7 +62,7 @@ public class DocumentController {
         return ResponseEntity.ok(apiResponse);
     }
 
-    @DeleteMapping("/documents/{id}")
+    @DeleteMapping("/v1.0/documents/{id}")
     public ResponseEntity<Void> deleteDocument(@PathVariable("id") String id) throws Exception {
         DocumentMetadataBean documentMetadataBean = getDocumentMetadata(id);
 
@@ -74,7 +75,7 @@ public class DocumentController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/documents/stream/{id}")
+    @GetMapping("/v1.0/documents/stream/{id}")
     public ResponseEntity<StreamingResponseBody> streamDocument(@PathVariable("id") String id) throws Exception {
         DocumentMetadataBean documentMetadataBean = getDocumentMetadata(id);
 

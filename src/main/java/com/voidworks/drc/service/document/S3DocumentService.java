@@ -1,8 +1,8 @@
 package com.voidworks.drc.service.document;
 
 import com.voidworks.drc.config.storage.s3.S3Config;
-import com.voidworks.drc.exception.DocumentDeleteException;
-import com.voidworks.drc.exception.DocumentUploadException;
+import com.voidworks.drc.exception.document.DocumentDeleteException;
+import com.voidworks.drc.exception.document.DocumentUploadException;
 import com.voidworks.drc.model.service.DocumentPutRequestBean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
