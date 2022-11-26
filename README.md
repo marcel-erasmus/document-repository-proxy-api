@@ -1,9 +1,12 @@
 # ABOUT
 
-A document repository consolidation API that can be used to consolidate document storage and retrieval across various storage providers.
+A document repository proxy API that can be used to consolidate document storage and retrieval across various storage providers.
+
+Currently, the API supports:
+* S3
+* Firebase
 
 # TODO
 
-* Uploading of documents.
 * Improving metadata queries to be more robust.
 * Auditing of metadata + document access.
