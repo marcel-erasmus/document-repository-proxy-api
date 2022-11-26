@@ -1,20 +1,27 @@
 package com.voidworks.drc.controller.advice;
 
+import com.voidworks.drc.exception.api.MalformedRequestBodyException;
 import com.voidworks.drc.exception.metadata.DocumentMetadataNotFoundException;
 import com.voidworks.drc.exception.storage.StorageProviderConfigurationException;
 import com.voidworks.drc.exception.storage.StorageProviderNotSupportedException;
-import com.voidworks.drc.model.api.response.BaseApiResponse;
 import com.voidworks.drc.model.api.error.Error;
+import com.voidworks.drc.model.api.error.ValidationError;
+import com.voidworks.drc.model.api.response.BaseApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindException;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -36,8 +43,41 @@ public class ExceptionControllerAdvice extends ResponseEntityExceptionHandler {
 
         return getApiResponse(
                 Collections.singletonList(error),
+                Collections.emptyList(),
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
+    }
+
+    @Override
+    public ResponseEntity<Object> handleBindException(BindException e, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        List<ObjectError> objectErrors = e.getBindingResult().getAllErrors();
+
+        List<ValidationError> validationErrors = new ArrayList<>();
+        objectErrors.forEach(objectError -> {
+            if ( !StringUtils.hasText(objectError.getDefaultMessage()) ) {
+                validationErrors.add(new ValidationError(objectError.getObjectName(), objectError.getCode()));
+            } else {
+                validationErrors.add(new ValidationError(objectError.getCode(), objectError.getDefaultMessage()));
+            }
+        });
+
+        BaseApiResponse baseApiResponse = BaseApiResponse.builder()
+                .errors(Collections.emptyList())
+                .validationErrors(validationErrors)
+                .build();
+
+        return new ResponseEntity<>(
+                baseApiResponse,
+                new HttpHeaders(),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler({ MalformedRequestBodyException.class })
+    public ResponseEntity<BaseApiResponse> handleMalformedRequestBodyException(MalformedRequestBodyException e) {
+        Error error = new Error(e.getReferenceId(), e.getMessage());
+
+        return getApiResponse(Collections.singletonList(error));
     }
 
     @ExceptionHandler({ MaxUploadSizeExceededException.class })
@@ -79,13 +119,13 @@ public class ExceptionControllerAdvice extends ResponseEntityExceptionHandler {
     }
 
     private ResponseEntity<BaseApiResponse> getApiResponse(List<Error> errors) {
-        return getApiResponse(errors, HttpStatus.BAD_REQUEST);
+        return getApiResponse(errors, Collections.emptyList(), HttpStatus.BAD_REQUEST);
     }
 
-    private ResponseEntity<BaseApiResponse> getApiResponse(List<Error> errors, HttpStatus httpStatus) {
+    private ResponseEntity<BaseApiResponse> getApiResponse(List<Error> errors, List<ValidationError> validationErrors, HttpStatus httpStatus) {
         BaseApiResponse baseApiResponse = BaseApiResponse.builder()
                 .errors(errors)
-                .validationErrors(Collections.emptyList())
+                .validationErrors(validationErrors)
                 .build();
 
         return new ResponseEntity<>(

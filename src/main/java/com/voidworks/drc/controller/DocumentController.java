@@ -1,6 +1,7 @@
 package com.voidworks.drc.controller;
 
 import com.voidworks.drc.enums.storage.StorageProvider;
+import com.voidworks.drc.enums.type.ContentType;
 import com.voidworks.drc.exception.metadata.DocumentMetadataNotFoundException;
 import com.voidworks.drc.exception.storage.StorageProviderNotSupportedException;
 import com.voidworks.drc.model.api.request.DocumentPutApiRequest;
@@ -12,17 +13,22 @@ import com.voidworks.drc.service.document.DocumentService;
 import com.voidworks.drc.service.document.FirebaseDocumentService;
 import com.voidworks.drc.service.document.S3DocumentService;
 import com.voidworks.drc.service.metadata.DocumentMetadataService;
+import com.voidworks.drc.util.FileUtil;
+import com.voidworks.drc.validation.DocumentPutApiRequestValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.util.FileCopyUtils;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/document-repo")
@@ -30,27 +36,44 @@ public class DocumentController {
 
     private final ApplicationContext applicationContext;
     private final DocumentMetadataService documentMetadataService;
+    private final DocumentPutApiRequestValidator documentPutApiRequestValidator;
     private final PojoMapper pojoMapper;
 
     @Autowired
     public DocumentController(ApplicationContext applicationContext,
                               DocumentMetadataService documentMetadataService,
+                              DocumentPutApiRequestValidator documentPutApiRequestValidator,
                               PojoMapper pojoMapper) {
         this.applicationContext = applicationContext;
         this.documentMetadataService = documentMetadataService;
+        this.documentPutApiRequestValidator = documentPutApiRequestValidator;
         this.pojoMapper = pojoMapper;
     }
 
+    @InitBinder
+    protected void initBinder(WebDataBinder binder) {
+        binder.setValidator(documentPutApiRequestValidator);
+    }
+
     @PutMapping("/v1.0/documents")
-    public ResponseEntity<ApiResponse<DocumentMetadataBean>> uploadDocument(DocumentPutApiRequest documentPutApiRequest) throws Exception {
+    public ResponseEntity<ApiResponse<DocumentMetadataBean>> uploadDocument(@Validated DocumentPutApiRequest documentPutApiRequest) throws Exception {
         DocumentService documentService = getDocumentService(documentPutApiRequest.getStorageProvider());
+
+        Optional<ContentType> contentTypeOptional = ContentType.getContentTypeByFileExtension(FileUtil.getFileExtension(documentPutApiRequest.getFilename()));
+
+        String contentType = contentTypeOptional.isPresent() ? contentTypeOptional.get().getContentType() : ContentType.OCTET_STREAM;
+
+        documentPutApiRequest.setKey(
+                UUID.randomUUID().toString().replaceAll("-", "") +
+                FileUtil.getFileExtension(documentPutApiRequest.getFilename())
+        );
+        documentPutApiRequest.setContentType(contentType);
 
         DocumentMetadataBean documentMetadataBean = pojoMapper.map(documentPutApiRequest, new DocumentMetadataBean());
 
         DocumentMetadataBean savedDocumentMetadataBean = documentMetadataService.save(documentMetadataBean);
 
         DocumentPutRequestBean documentPutRequestBean = pojoMapper.map(documentPutApiRequest, new DocumentPutRequestBean());
-        documentPutRequestBean.setKey(savedDocumentMetadataBean.getId() + "");
         documentPutRequestBean.setFile(documentPutApiRequest.getFile().getInputStream());
 
         documentService.uploadDocument(documentPutRequestBean);

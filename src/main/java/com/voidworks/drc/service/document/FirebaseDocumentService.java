@@ -46,7 +46,7 @@ public class FirebaseDocumentService implements DocumentService {
                     .setContentType(documentPutRequestBean.getContentType())
                     .build();
 
-            File file = getFile(documentPutRequestBean.getFile(), documentPutRequestBean.getFilename());
+            File file = getFile(documentPutRequestBean.getFile(), documentPutRequestBean.getKey());
 
             storage.create(blobInfo, Files.readAllBytes(file.toPath()));
 
