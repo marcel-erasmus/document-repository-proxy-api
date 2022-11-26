@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.voidworks</groupId>
-	<artifactId>document-repository-api</artifactId>
+	<artifactId>document-repository-proxy-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>document-repository-api</name>
-	<description>A document repository API that can be used to consolidate document storage and retrieval across various storage providers.</description>
+	<name>document-repository-proxy-api</name>
+	<description>A document repository proxy API that can be used to consolidate document storage and retrieval across various storage providers.</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>
