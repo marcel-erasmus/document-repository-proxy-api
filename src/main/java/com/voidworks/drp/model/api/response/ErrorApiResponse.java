@@ -9,7 +9,7 @@ import java.util.List;
 
 @Builder
 @Getter
-public class BaseApiResponse {
+public class ErrorApiResponse {
 
     private List<Error> errors;
     private List<ValidationError> validationErrors;

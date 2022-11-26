@@ -1,10 +1,10 @@
 package com.voidworks.drp.service.metadata;
 
 import com.voidworks.drp.exception.database.DatabasePersistenceException;
-import com.voidworks.drp.model.database.DocumentMetadataDocument;
+import com.voidworks.drp.model.database.metadata.DocumentMetadataDocument;
 import com.voidworks.drp.model.mapper.PojoMapper;
 import com.voidworks.drp.model.service.DocumentMetadataBean;
-import com.voidworks.drp.repository.DocumentMetadataRepository;
+import com.voidworks.drp.repository.metadata.DocumentMetadataRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

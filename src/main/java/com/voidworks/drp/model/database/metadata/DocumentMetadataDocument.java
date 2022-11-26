@@ -1,5 +1,6 @@
-package com.voidworks.drp.model.database;
+package com.voidworks.drp.model.database.metadata;
 
+import com.voidworks.drp.model.document.DocumentSource;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,7 +20,6 @@ public class DocumentMetadataDocument {
     private String filename;
     private String contentType;
     private Map<String, String> references;
-    private String storageProvider;
-    private String key;
+    private DocumentSource documentSource;
 
 }

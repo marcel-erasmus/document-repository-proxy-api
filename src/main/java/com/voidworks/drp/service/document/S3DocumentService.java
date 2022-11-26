@@ -1,14 +1,21 @@
 package com.voidworks.drp.service.document;
 
-import com.voidworks.drp.config.storage.s3.S3Config;
+import com.voidworks.drp.enums.storage.StorageProvider;
 import com.voidworks.drp.exception.document.DocumentDeleteException;
 import com.voidworks.drp.exception.document.DocumentUploadException;
+import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
+import com.voidworks.drp.model.document.DocumentSource;
+import com.voidworks.drp.model.config.S3Config;
 import com.voidworks.drp.model.service.DocumentPutRequestBean;
+import com.voidworks.drp.model.service.StorageProviderBean;
+import com.voidworks.drp.resolver.storage.s3.S3ConfigResolverFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.RequestScope;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -22,23 +29,19 @@ import java.io.InputStream;
 @Service
 public class S3DocumentService implements DocumentService {
 
-    private final S3Config s3Config;
-    private final S3Client s3Client;
-
-    @Autowired
-    public S3DocumentService(S3Config s3Config,
-                             S3Client s3Client) {
-        this.s3Config = s3Config;
-        this.s3Client = s3Client;
-    }
-
     @Override
     public void uploadDocument(DocumentPutRequestBean documentPutRequestBean) {
         try {
+            S3Config s3Config = S3ConfigResolverFactory
+                    .getInstance(documentPutRequestBean.getStorageProvider())
+                    .resolve();
+
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(s3Config.getBucket())
-                    .key(documentPutRequestBean.getKey())
+                    .bucket(s3Config.bucket())
+                    .key(documentPutRequestBean.getDocumentSource().getKey())
                     .build();
+
+            S3Client s3Client = getS3Client(s3Config);
 
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(documentPutRequestBean.getFile(), documentPutRequestBean.getFile().available()));
         } catch (S3Exception e) {
@@ -53,29 +56,63 @@ public class S3DocumentService implements DocumentService {
     }
 
     @Override
-    public void deleteDocument(String key) {
+    public void deleteDocument(StorageProviderBean storageProviderBean, DocumentSource documentSource) {
         try {
+            S3Config s3Config = S3ConfigResolverFactory
+                    .getInstance(storageProviderBean)
+                    .resolve();
+
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(s3Config.getBucket())
-                    .key(key)
+                    .bucket(s3Config.bucket())
+                    .key(documentSource.getKey())
                     .build();
 
-            s3Client.deleteObject(deleteObjectRequest);
-        } catch (Exception e) {
-            log.error("Could not delete file from S3! {}", e.getMessage(), e);
+            S3Client s3Client = getS3Client(s3Config);
 
+            s3Client.deleteObject(deleteObjectRequest);
+        } catch (StorageProviderConfigurationException e) {
+            throw e;
+        } catch (Exception e) {
             throw new DocumentDeleteException(e);
         }
     }
 
     @Override
-    public InputStream downloadDocument(String key) {
+    public InputStream downloadDocument(StorageProviderBean storageProviderBean, DocumentSource documentSource) {
+        S3Config s3Config = S3ConfigResolverFactory
+                .getInstance(storageProviderBean)
+                .resolve();
+
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(s3Config.getBucket())
-                .key(key)
+                .bucket(s3Config.bucket())
+                .key(documentSource.getKey())
                 .build();
 
+        S3Client s3Client = getS3Client(s3Config);
+
         return s3Client.getObject(getObjectRequest);
+    }
+
+    private S3Client getS3Client(S3Config s3Config) {
+        try {
+            long timeStarted = System.currentTimeMillis();
+
+            AwsBasicCredentials awsBasicCredentials = AwsBasicCredentials.create(
+                    s3Config.accessKeyId(),
+                    s3Config.secretAccessKey()
+            );
+
+            S3Client s3Client = S3Client.builder()
+                    .region(Region.of(s3Config.region()))
+                    .credentialsProvider(StaticCredentialsProvider.create(awsBasicCredentials))
+                    .build();
+
+            log.debug("S3 client instantiated! Took [{}] ms.", System.currentTimeMillis() - timeStarted);
+
+            return s3Client;
+        } catch (Exception e) {
+            throw new StorageProviderConfigurationException(StorageProvider.S3.name(), e);
+        }
     }
 
 }

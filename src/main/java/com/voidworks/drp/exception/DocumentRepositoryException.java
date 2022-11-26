@@ -1,9 +1,8 @@
 package com.voidworks.drp.exception;
 
+import com.voidworks.drp.util.IdGeneratorUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.UUID;
 
 @Slf4j
 @Getter
@@ -25,11 +24,11 @@ public class DocumentRepositoryException extends RuntimeException {
     }
 
     public DocumentRepositoryException(String message, Exception exception) {
-        this(UUID.randomUUID().toString(), message, exception);
+        this(IdGeneratorUtil.getId(), message, exception);
     }
 
     public DocumentRepositoryException(String message) {
-        this(UUID.randomUUID().toString(), message, null);
+        this(IdGeneratorUtil.getId(), message, null);
     }
 
 }

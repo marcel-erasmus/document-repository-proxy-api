@@ -3,14 +3,16 @@ package com.voidworks.drp.service.document;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.*;
-import com.voidworks.drp.config.storage.firebase.FirebaseConfig;
 import com.voidworks.drp.enums.storage.StorageProvider;
 import com.voidworks.drp.exception.document.DocumentDeleteException;
 import com.voidworks.drp.exception.document.DocumentUploadException;
 import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
+import com.voidworks.drp.model.document.DocumentSource;
+import com.voidworks.drp.model.config.FirebaseConfig;
 import com.voidworks.drp.model.service.DocumentPutRequestBean;
+import com.voidworks.drp.model.service.StorageProviderBean;
+import com.voidworks.drp.resolver.storage.firebase.FirebaseConfigResolverFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.RequestScope;
 
@@ -26,34 +28,29 @@ import java.nio.file.Files;
 @Service
 public class FirebaseDocumentService implements DocumentService {
 
-    private final FirebaseConfig firebaseConfig;
-
-    @Autowired
-    public FirebaseDocumentService(FirebaseConfig firebaseConfig) {
-        this.firebaseConfig = firebaseConfig;
-    }
-
     @Override
     public void uploadDocument(DocumentPutRequestBean documentPutRequestBean) {
         try {
-            String bucket = firebaseConfig.getBucket();
+            FirebaseConfig firebaseConfig = FirebaseConfigResolverFactory
+                    .getInstance(documentPutRequestBean.getStorageProvider())
+                    .resolve();
 
-            Storage storage = getStorage();
-
-            BlobId blobId = BlobId.of(bucket, documentPutRequestBean.getKey());
+            BlobId blobId = BlobId.of(firebaseConfig.bucket(), documentPutRequestBean.getDocumentSource().getKey());
 
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                     .setContentType(documentPutRequestBean.getContentType())
                     .build();
 
-            File file = getFile(documentPutRequestBean.getFile(), documentPutRequestBean.getKey());
+            File file = getFile(documentPutRequestBean.getFile(), documentPutRequestBean.getDocumentSource().getKey());
+
+            Storage storage = getStorage(firebaseConfig);
 
             storage.create(blobInfo, Files.readAllBytes(file.toPath()));
 
             if (file.delete()) {
-                log.debug("Successfully deleted temporary file [{}] after upload to Firebase!", documentPutRequestBean.getKey());
+                log.debug("Successfully deleted temporary file [{}] after upload to Firebase!", documentPutRequestBean.getDocumentSource().getKey());
             } else {
-                log.debug("Deletion of temporary file [{}] after upload to Firebase failed! It might need to be manually deleted!", documentPutRequestBean.getKey());
+                log.debug("Deletion of temporary file [{}] after upload to Firebase failed! It might need to be manually deleted!", documentPutRequestBean.getDocumentSource().getKey());
             }
         } catch (StorageProviderConfigurationException e) {
             throw e;
@@ -79,13 +76,15 @@ public class FirebaseDocumentService implements DocumentService {
     }
 
     @Override
-    public void deleteDocument(String key) {
+    public void deleteDocument(StorageProviderBean storageProviderBean, DocumentSource documentSource) {
         try {
-            String bucket = firebaseConfig.getBucket();
+            FirebaseConfig firebaseConfig = FirebaseConfigResolverFactory
+                    .getInstance(storageProviderBean)
+                    .resolve();
 
-            Storage storage = getStorage();
+            BlobId blobId = BlobId.of(firebaseConfig.bucket(), documentSource.getKey());
 
-            BlobId blobId = BlobId.of(bucket, key);
+            Storage storage = getStorage(firebaseConfig);
 
             storage.delete(blobId);
         } catch (Exception e) {
@@ -96,25 +95,27 @@ public class FirebaseDocumentService implements DocumentService {
     }
 
     @Override
-    public InputStream downloadDocument(String key) {
-        String bucket = firebaseConfig.getBucket();
+    public InputStream downloadDocument(StorageProviderBean storageProviderBean, DocumentSource documentSource) {
+        FirebaseConfig firebaseConfig = FirebaseConfigResolverFactory
+                .getInstance(storageProviderBean)
+                .resolve();
 
-        Storage storage = getStorage();
+        Storage storage = getStorage(firebaseConfig);
 
-        Blob blob = storage.get(BlobId.of(bucket, key));
+        Blob blob = storage.get(BlobId.of(firebaseConfig.bucket(), documentSource.getKey()));
 
         ReadChannel reader = blob.reader();
 
         return Channels.newInputStream(reader);
     }
 
-    private Storage getStorage() throws StorageProviderConfigurationException {
-        String projectId = firebaseConfig.getProjectId();
+    private Storage getStorage(FirebaseConfig firebaseConfig) throws StorageProviderConfigurationException {
+        String projectId = firebaseConfig.projectId();
 
         long timeStarted = System.currentTimeMillis();
 
         StorageOptions storageOptions;
-        try (FileInputStream serviceAccount = new FileInputStream(firebaseConfig.getServiceAccount())) {
+        try (FileInputStream serviceAccount = new FileInputStream(firebaseConfig.serviceAccount())) {
             storageOptions = StorageOptions.newBuilder()
                     .setProjectId(projectId)
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))

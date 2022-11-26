@@ -1,5 +1,6 @@
 package com.voidworks.drp.model.service;
 
+import com.voidworks.drp.model.document.DocumentSource;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,7 +16,6 @@ public class DocumentMetadataBean {
     private String filename;
     private String contentType;
     private Map<String, String> references;
-    private String storageProvider;
-    private String key;
+    private DocumentSource documentSource;
 
 }

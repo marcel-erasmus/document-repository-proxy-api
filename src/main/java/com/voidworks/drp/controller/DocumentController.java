@@ -3,17 +3,22 @@ package com.voidworks.drp.controller;
 import com.voidworks.drp.enums.storage.StorageProvider;
 import com.voidworks.drp.enums.type.ContentType;
 import com.voidworks.drp.exception.metadata.DocumentMetadataNotFoundException;
+import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
 import com.voidworks.drp.exception.storage.StorageProviderNotSupportedException;
 import com.voidworks.drp.model.api.request.DocumentPutApiRequest;
 import com.voidworks.drp.model.api.response.ApiResponse;
+import com.voidworks.drp.model.document.DocumentSource;
 import com.voidworks.drp.model.mapper.PojoMapper;
 import com.voidworks.drp.model.service.DocumentMetadataBean;
 import com.voidworks.drp.model.service.DocumentPutRequestBean;
+import com.voidworks.drp.model.service.StorageProviderBean;
 import com.voidworks.drp.service.document.DocumentService;
 import com.voidworks.drp.service.document.FirebaseDocumentService;
 import com.voidworks.drp.service.document.S3DocumentService;
 import com.voidworks.drp.service.metadata.DocumentMetadataService;
+import com.voidworks.drp.service.storage.StorageProviderService;
 import com.voidworks.drp.util.FileUtil;
+import com.voidworks.drp.util.IdGeneratorUtil;
 import com.voidworks.drp.validation.DocumentPutApiRequestValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -28,7 +33,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/document-repo")
@@ -36,16 +40,19 @@ public class DocumentController {
 
     private final ApplicationContext applicationContext;
     private final DocumentMetadataService documentMetadataService;
+    private final StorageProviderService storageProviderService;
     private final DocumentPutApiRequestValidator documentPutApiRequestValidator;
     private final PojoMapper pojoMapper;
 
     @Autowired
     public DocumentController(ApplicationContext applicationContext,
                               DocumentMetadataService documentMetadataService,
+                              StorageProviderService storageProviderService,
                               DocumentPutApiRequestValidator documentPutApiRequestValidator,
                               PojoMapper pojoMapper) {
         this.applicationContext = applicationContext;
         this.documentMetadataService = documentMetadataService;
+        this.storageProviderService = storageProviderService;
         this.documentPutApiRequestValidator = documentPutApiRequestValidator;
         this.pojoMapper = pojoMapper;
     }
@@ -57,24 +64,33 @@ public class DocumentController {
 
     @PutMapping("/v1.0/documents")
     public ResponseEntity<ApiResponse<DocumentMetadataBean>> uploadDocument(@Validated DocumentPutApiRequest documentPutApiRequest) throws Exception {
-        DocumentService documentService = getDocumentService(documentPutApiRequest.getStorageProvider());
+        StorageProviderBean storageProviderBean = getStorageProvider(documentPutApiRequest.getStorageProviderId());
+
+        DocumentService documentService = getDocumentService(storageProviderBean.getStorageProvider());
 
         Optional<ContentType> contentTypeOptional = ContentType.getContentTypeByFileExtension(FileUtil.getFileExtension(documentPutApiRequest.getFilename()));
 
         String contentType = contentTypeOptional.isPresent() ? contentTypeOptional.get().getContentType() : ContentType.OCTET_STREAM;
 
         documentPutApiRequest.setKey(
-                UUID.randomUUID().toString().replaceAll("-", "") +
+                IdGeneratorUtil.getId() +
                 FileUtil.getFileExtension(documentPutApiRequest.getFilename())
         );
         documentPutApiRequest.setContentType(contentType);
 
+        DocumentSource documentSource = new DocumentSource();
+        documentSource.setStorageProviderId(documentPutApiRequest.getStorageProviderId());
+        documentSource.setKey(documentPutApiRequest.getKey());
+
         DocumentMetadataBean documentMetadataBean = pojoMapper.map(documentPutApiRequest, new DocumentMetadataBean());
+        documentMetadataBean.setDocumentSource(documentSource);
 
         DocumentMetadataBean savedDocumentMetadataBean = documentMetadataService.save(documentMetadataBean);
 
         DocumentPutRequestBean documentPutRequestBean = pojoMapper.map(documentPutApiRequest, new DocumentPutRequestBean());
         documentPutRequestBean.setFile(documentPutApiRequest.getFile().getInputStream());
+        documentPutRequestBean.setStorageProvider(storageProviderBean);
+        documentPutRequestBean.setDocumentSource(documentSource);
 
         documentService.uploadDocument(documentPutRequestBean);
 
@@ -87,11 +103,13 @@ public class DocumentController {
 
     @DeleteMapping("/v1.0/documents/{id}")
     public ResponseEntity<Void> deleteDocument(@PathVariable("id") String id) throws Exception {
-        DocumentMetadataBean documentMetadataBean = getDocumentMetadata(id);
+        DocumentMetadataBean documentMetadataBean = getDocumentMetadataBean(id);
 
-        DocumentService documentService = getDocumentService(documentMetadataBean.getStorageProvider());
+        StorageProviderBean storageProviderBean = getStorageProvider(documentMetadataBean.getDocumentSource().getStorageProviderId());
 
-        documentService.deleteDocument(documentMetadataBean.getKey());
+        DocumentService documentService = getDocumentService(storageProviderBean.getStorageProvider());
+
+        documentService.deleteDocument(storageProviderBean, documentMetadataBean.getDocumentSource());
 
         documentMetadataService.delete(id);
 
@@ -100,11 +118,13 @@ public class DocumentController {
 
     @GetMapping("/v1.0/documents/stream/{id}")
     public ResponseEntity<StreamingResponseBody> streamDocument(@PathVariable("id") String id) throws Exception {
-        DocumentMetadataBean documentMetadataBean = getDocumentMetadata(id);
+        DocumentMetadataBean documentMetadataBean = getDocumentMetadataBean(id);
 
-        DocumentService documentService = getDocumentService(documentMetadataBean.getStorageProvider());
+        StorageProviderBean storageProviderBean = getStorageProvider(documentMetadataBean.getDocumentSource().getStorageProviderId());
 
-        InputStream inputStream = documentService.downloadDocument(documentMetadataBean.getKey());
+        DocumentService documentService = getDocumentService(storageProviderBean.getStorageProvider());
+
+        InputStream inputStream = documentService.downloadDocument(storageProviderBean, documentMetadataBean.getDocumentSource());
 
         InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
 
@@ -128,17 +148,27 @@ public class DocumentController {
         }
     }
 
-    private DocumentService getDocumentService(String storageProvider) {
-        if (storageProvider.equals(StorageProvider.S3.name())) {
+    private DocumentService getDocumentService(StorageProvider storageProvider) {
+        if (storageProvider.equals(StorageProvider.S3)) {
             return applicationContext.getBean(S3DocumentService.class);
-        } else if (storageProvider.equals(StorageProvider.FIREBASE.name())) {
+        } else if (storageProvider.equals(StorageProvider.FIREBASE)) {
             return applicationContext.getBean(FirebaseDocumentService.class);
         }
 
-        throw new StorageProviderNotSupportedException(storageProvider);
+        throw new StorageProviderNotSupportedException(storageProvider.name());
     }
 
-    private DocumentMetadataBean getDocumentMetadata(String id) {
+    private StorageProviderBean getStorageProvider(String id) {
+        Optional<StorageProviderBean> storageProviderBeanOptional = storageProviderService.findById(id);
+
+        if (storageProviderBeanOptional.isEmpty()) {
+            throw new StorageProviderConfigurationException(id);
+        }
+
+        return storageProviderBeanOptional.get();
+    }
+
+    private DocumentMetadataBean getDocumentMetadataBean(String id) {
         Optional<DocumentMetadataBean> documentMetadataBeanOptional = documentMetadataService.findById(id);
 
         if (documentMetadataBeanOptional.isEmpty()) {

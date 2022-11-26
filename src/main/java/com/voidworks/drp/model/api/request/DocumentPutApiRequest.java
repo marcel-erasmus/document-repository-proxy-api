@@ -18,7 +18,7 @@ public class DocumentPutApiRequest {
     private String filename;
     private String contentType;
     private Map<String, String> references;
-    private String storageProvider;
+    private String storageProviderId;
     private String key;
 
 }
