@@ -37,7 +37,7 @@ public class S3DocumentService implements DocumentService {
 
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(s3Config.bucket())
+                    .bucket(s3Config.getBucket())
                     .key(documentPutRequestBean.getDocumentSource().key())
                     .build();
 
@@ -64,7 +64,7 @@ public class S3DocumentService implements DocumentService {
 
         try {
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(s3Config.bucket())
+                    .bucket(s3Config.getBucket())
                     .key(documentIdentity.documentSource().key())
                     .build();
 
@@ -83,7 +83,7 @@ public class S3DocumentService implements DocumentService {
                 .resolve();
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(s3Config.bucket())
+                .bucket(s3Config.getBucket())
                 .key(documentIdentity.documentSource().key())
                 .build();
 
@@ -94,23 +94,17 @@ public class S3DocumentService implements DocumentService {
 
     private S3Client getS3Client(S3Config s3Config) {
         try {
-            long timeStarted = System.currentTimeMillis();
-
             AwsBasicCredentials awsBasicCredentials = AwsBasicCredentials.create(
-                    s3Config.accessKeyId(),
-                    s3Config.secretAccessKey()
+                    s3Config.getAccessKeyId(),
+                    s3Config.getSecretAccessKey()
             );
 
-            S3Client s3Client = S3Client.builder()
-                    .region(Region.of(s3Config.region()))
+            return S3Client.builder()
+                    .region(Region.of(s3Config.getRegion()))
                     .credentialsProvider(StaticCredentialsProvider.create(awsBasicCredentials))
                     .build();
-
-            log.debug("S3 client instantiated! Took [{}] ms.", System.currentTimeMillis() - timeStarted);
-
-            return s3Client;
         } catch (Exception e) {
-            throw new StorageProviderConfigurationException(s3Config.id(), e);
+            throw new StorageProviderConfigurationException(s3Config.getId(), e);
         }
     }
 

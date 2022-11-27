@@ -2,6 +2,7 @@ package com.voidworks.drp.resolver.storage.firebase;
 
 import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
 import com.voidworks.drp.model.config.FirebaseConfig;
+import com.voidworks.drp.model.config.StorageProviderConfig;
 import com.voidworks.drp.resolver.storage.StorageProviderConfigCache;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +26,9 @@ public class PropertyFirebaseConfigResolver implements FirebaseConfigResolver {
 
     @Override
     public FirebaseConfig resolve() {
-        Optional<FirebaseConfig> firebaseConfigOptional = StorageProviderConfigCache.getFirebaseConfig(id);
+        Optional<StorageProviderConfig> firebaseConfigOptional = StorageProviderConfigCache.getStorageProviderConfig(id);
         if (firebaseConfigOptional.isPresent()) {
-            return firebaseConfigOptional.get();
+            return (FirebaseConfig) firebaseConfigOptional.get();
         }
 
         File file = new File(propertySource);

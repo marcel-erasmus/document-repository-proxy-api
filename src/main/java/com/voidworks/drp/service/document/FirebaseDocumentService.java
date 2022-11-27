@@ -36,7 +36,7 @@ public class FirebaseDocumentService implements DocumentService {
 
         File file = getFile(documentPutRequestBean.getFile(), documentPutRequestBean.getDocumentSource().key());
         try {
-            BlobId blobId = BlobId.of(firebaseConfig.bucket(), documentPutRequestBean.getDocumentSource().key());
+            BlobId blobId = BlobId.of(firebaseConfig.getBucket(), documentPutRequestBean.getDocumentSource().key());
 
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                     .setContentType(documentPutRequestBean.getContentType())
@@ -79,7 +79,7 @@ public class FirebaseDocumentService implements DocumentService {
         Storage storage = getStorage(firebaseConfig);
 
         try {
-            BlobId blobId = BlobId.of(firebaseConfig.bucket(), documentIdentity.documentSource().key());
+            BlobId blobId = BlobId.of(firebaseConfig.getBucket(), documentIdentity.documentSource().key());
 
             storage.delete(blobId);
         } catch (Exception e) {
@@ -97,7 +97,7 @@ public class FirebaseDocumentService implements DocumentService {
 
         Storage storage = getStorage(firebaseConfig);
 
-        Blob blob = storage.get(BlobId.of(firebaseConfig.bucket(), documentIdentity.documentSource().key()));
+        Blob blob = storage.get(BlobId.of(firebaseConfig.getBucket(), documentIdentity.documentSource().key()));
 
         ReadChannel reader = blob.reader();
 
@@ -105,12 +105,10 @@ public class FirebaseDocumentService implements DocumentService {
     }
 
     private Storage getStorage(FirebaseConfig firebaseConfig) throws StorageProviderConfigurationException {
-        String projectId = firebaseConfig.projectId();
-
-        long timeStarted = System.currentTimeMillis();
+        String projectId = firebaseConfig.getProjectId();
 
         StorageOptions storageOptions;
-        try (FileInputStream serviceAccount = new FileInputStream(firebaseConfig.serviceAccount())) {
+        try (FileInputStream serviceAccount = new FileInputStream(firebaseConfig.getServiceAccount())) {
             storageOptions = StorageOptions.newBuilder()
                     .setProjectId(projectId)
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -118,14 +116,10 @@ public class FirebaseDocumentService implements DocumentService {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
 
-            throw new StorageProviderConfigurationException(firebaseConfig.id(), e);
+            throw new StorageProviderConfigurationException(firebaseConfig.getId(), e);
         }
 
-        Storage storage = storageOptions.getService();
-
-        log.debug("Firebase client instantiated! Took [{}] ms.", System.currentTimeMillis() - timeStarted);
-
-        return storage;
+        return storageOptions.getService();
     }
 
 }

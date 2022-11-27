@@ -1,8 +1,8 @@
 package com.voidworks.drp.resolver.storage.s3;
 
 import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
-import com.voidworks.drp.model.config.FirebaseConfig;
 import com.voidworks.drp.model.config.S3Config;
+import com.voidworks.drp.model.config.StorageProviderConfig;
 import com.voidworks.drp.resolver.storage.StorageProviderConfigCache;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +27,9 @@ public class PropertyS3ConfigResolver implements S3ConfigResolver {
 
    @Override
    public S3Config resolve() {
-      Optional<S3Config> s3ConfigOptional = StorageProviderConfigCache.getS3Config(id);
+      Optional<StorageProviderConfig> s3ConfigOptional = StorageProviderConfigCache.getStorageProviderConfig(id);
       if (s3ConfigOptional.isPresent()) {
-         return s3ConfigOptional.get();
+         return (S3Config) s3ConfigOptional.get();
       }
 
       File file = new File(propertySource);
