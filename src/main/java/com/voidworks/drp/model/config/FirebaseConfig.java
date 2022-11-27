@@ -1,7 +1,8 @@
 package com.voidworks.drp.model.config;
 
-public record FirebaseConfig(String serviceAccount,
+public record FirebaseConfig(String id,
+                             String serviceAccount,
                              String projectId,
-                             String bucket) {
+                             String bucket) implements StorageProviderIdentity {
 
 }

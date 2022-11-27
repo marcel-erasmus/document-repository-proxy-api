@@ -7,6 +7,7 @@ import com.voidworks.drp.exception.storage.StorageProviderConfigurationException
 import com.voidworks.drp.exception.storage.StorageProviderNotSupportedException;
 import com.voidworks.drp.model.api.request.DocumentPutApiRequest;
 import com.voidworks.drp.model.api.response.ApiResponse;
+import com.voidworks.drp.model.document.DocumentIdentity;
 import com.voidworks.drp.model.document.DocumentSource;
 import com.voidworks.drp.model.mapper.PojoMapper;
 import com.voidworks.drp.model.service.DocumentMetadataBean;
@@ -78,9 +79,10 @@ public class DocumentController {
         );
         documentPutApiRequest.setContentType(contentType);
 
-        DocumentSource documentSource = new DocumentSource();
-        documentSource.setStorageProviderId(documentPutApiRequest.getStorageProviderId());
-        documentSource.setKey(documentPutApiRequest.getKey());
+        DocumentSource documentSource = new DocumentSource(
+                documentPutApiRequest.getStorageProviderId(),
+                documentPutApiRequest.getKey()
+        );
 
         DocumentMetadataBean documentMetadataBean = pojoMapper.map(documentPutApiRequest, new DocumentMetadataBean());
         documentMetadataBean.setDocumentSource(documentSource);
@@ -105,11 +107,17 @@ public class DocumentController {
     public ResponseEntity<Void> deleteDocument(@PathVariable("id") String id) throws Exception {
         DocumentMetadataBean documentMetadataBean = getDocumentMetadataBean(id);
 
-        StorageProviderBean storageProviderBean = getStorageProvider(documentMetadataBean.getDocumentSource().getStorageProviderId());
+        StorageProviderBean storageProviderBean = getStorageProvider(documentMetadataBean.getDocumentSource().storageProviderId());
 
         DocumentService documentService = getDocumentService(storageProviderBean.getStorageProvider());
 
-        documentService.deleteDocument(storageProviderBean, documentMetadataBean.getDocumentSource());
+        DocumentIdentity documentIdentity = new DocumentIdentity(
+                documentMetadataBean.getId(),
+                storageProviderBean,
+                documentMetadataBean.getDocumentSource()
+        );
+
+        documentService.deleteDocument(documentIdentity);
 
         documentMetadataService.delete(id);
 
@@ -120,11 +128,17 @@ public class DocumentController {
     public ResponseEntity<StreamingResponseBody> streamDocument(@PathVariable("id") String id) throws Exception {
         DocumentMetadataBean documentMetadataBean = getDocumentMetadataBean(id);
 
-        StorageProviderBean storageProviderBean = getStorageProvider(documentMetadataBean.getDocumentSource().getStorageProviderId());
+        StorageProviderBean storageProviderBean = getStorageProvider(documentMetadataBean.getDocumentSource().storageProviderId());
 
         DocumentService documentService = getDocumentService(storageProviderBean.getStorageProvider());
 
-        InputStream inputStream = documentService.downloadDocument(storageProviderBean, documentMetadataBean.getDocumentSource());
+        DocumentIdentity documentIdentity = new DocumentIdentity(
+                documentMetadataBean.getId(),
+                storageProviderBean,
+                documentMetadataBean.getDocumentSource()
+        );
+
+        InputStream inputStream = documentService.downloadDocument(documentIdentity);
 
         InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
 

@@ -1,13 +1,11 @@
 package com.voidworks.drp.service.document;
 
-import com.voidworks.drp.enums.storage.StorageProvider;
 import com.voidworks.drp.exception.document.DocumentDeleteException;
 import com.voidworks.drp.exception.document.DocumentUploadException;
 import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
-import com.voidworks.drp.model.document.DocumentSource;
 import com.voidworks.drp.model.config.S3Config;
+import com.voidworks.drp.model.document.DocumentIdentity;
 import com.voidworks.drp.model.service.DocumentPutRequestBean;
-import com.voidworks.drp.model.service.StorageProviderBean;
 import com.voidworks.drp.resolver.storage.s3.S3ConfigResolverFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,17 +29,18 @@ public class S3DocumentService implements DocumentService {
 
     @Override
     public void uploadDocument(DocumentPutRequestBean documentPutRequestBean) {
-        try {
-            S3Config s3Config = S3ConfigResolverFactory
-                    .getInstance(documentPutRequestBean.getStorageProvider())
-                    .resolve();
+        S3Config s3Config = S3ConfigResolverFactory
+                .getInstance(documentPutRequestBean.getStorageProvider())
+                .resolve();
 
+        S3Client s3Client = getS3Client(s3Config);
+
+        try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(s3Config.bucket())
-                    .key(documentPutRequestBean.getDocumentSource().getKey())
+                    .key(documentPutRequestBean.getDocumentSource().key())
                     .build();
 
-            S3Client s3Client = getS3Client(s3Config);
 
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(documentPutRequestBean.getFile(), documentPutRequestBean.getFile().available()));
         } catch (S3Exception e) {
@@ -56,18 +55,18 @@ public class S3DocumentService implements DocumentService {
     }
 
     @Override
-    public void deleteDocument(StorageProviderBean storageProviderBean, DocumentSource documentSource) {
-        try {
-            S3Config s3Config = S3ConfigResolverFactory
-                    .getInstance(storageProviderBean)
-                    .resolve();
+    public void deleteDocument(DocumentIdentity documentIdentity) {
+        S3Config s3Config = S3ConfigResolverFactory
+                .getInstance(documentIdentity.storageProviderBean())
+                .resolve();
 
+        S3Client s3Client = getS3Client(s3Config);
+
+        try {
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                     .bucket(s3Config.bucket())
-                    .key(documentSource.getKey())
+                    .key(documentIdentity.documentSource().key())
                     .build();
-
-            S3Client s3Client = getS3Client(s3Config);
 
             s3Client.deleteObject(deleteObjectRequest);
         } catch (StorageProviderConfigurationException e) {
@@ -78,14 +77,14 @@ public class S3DocumentService implements DocumentService {
     }
 
     @Override
-    public InputStream downloadDocument(StorageProviderBean storageProviderBean, DocumentSource documentSource) {
+    public InputStream downloadDocument(DocumentIdentity documentIdentity) {
         S3Config s3Config = S3ConfigResolverFactory
-                .getInstance(storageProviderBean)
+                .getInstance(documentIdentity.storageProviderBean())
                 .resolve();
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(s3Config.bucket())
-                .key(documentSource.getKey())
+                .key(documentIdentity.documentSource().key())
                 .build();
 
         S3Client s3Client = getS3Client(s3Config);
@@ -111,7 +110,7 @@ public class S3DocumentService implements DocumentService {
 
             return s3Client;
         } catch (Exception e) {
-            throw new StorageProviderConfigurationException(StorageProvider.S3.name(), e);
+            throw new StorageProviderConfigurationException(s3Config.id(), e);
         }
     }
 

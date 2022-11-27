@@ -1,7 +1,7 @@
 package com.voidworks.drp.resolver.storage.firebase;
 
 import com.voidworks.drp.enums.storage.StorageProvider;
-import com.voidworks.drp.enums.storage.StorageProviderConfigType;
+import com.voidworks.drp.enums.storage.StorageProviderConfigResolverType;
 import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
 import com.voidworks.drp.model.service.StorageProviderBean;
 
@@ -12,10 +12,10 @@ public class FirebaseConfigResolverFactory {
          throw new StorageProviderConfigurationException(storageProviderBean.getId());
       }
 
-      if (storageProviderBean.getConfigType().equals(StorageProviderConfigType.FIREBASE_FILE_PROPERTIES)) {
+      if (storageProviderBean.getConfigResolverType().equals(StorageProviderConfigResolverType.FIREBASE_FILE_PROPERTY)) {
          return PropertyFirebaseConfigResolver.builder()
                  .id(storageProviderBean.getId())
-                 .propertySource(storageProviderBean.getConfig().get("propertySource"))
+                 .propertySource(storageProviderBean.getResolverConfig().get("propertySource"))
                  .build();
       }
 

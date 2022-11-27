@@ -30,6 +30,7 @@ public class PropertyS3ConfigResolver implements S3ConfigResolver {
          properties.load(inputStream);
 
          return new S3Config(
+                 id,
                  properties.getProperty(PROPERTY_BUCKET),
                  properties.getProperty(PROPERTY_REGION),
                  properties.getProperty(PROPERTY_ACCESS_KEY_ID),

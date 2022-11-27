@@ -1,7 +1,7 @@
 package com.voidworks.drp.model.database.storage;
 
 import com.voidworks.drp.enums.storage.StorageProvider;
-import com.voidworks.drp.enums.storage.StorageProviderConfigType;
+import com.voidworks.drp.enums.storage.StorageProviderConfigResolverType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,7 +19,7 @@ public class StorageProviderDocument {
     @Id
     private String id;
     private StorageProvider storageProvider;
-    private StorageProviderConfigType configType;
-    private Map<String, String> config;
+    private StorageProviderConfigResolverType configResolverType;
+    private Map<String, String> resolverConfig;
 
 }

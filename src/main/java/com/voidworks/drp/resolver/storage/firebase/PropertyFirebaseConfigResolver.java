@@ -29,6 +29,7 @@ public class PropertyFirebaseConfigResolver implements FirebaseConfigResolver {
             properties.load(inputStream);
 
             return new FirebaseConfig(
+                    id,
                     properties.getProperty(PROPERTY_SERVICE_ACCOUNT),
                     properties.getProperty(PROPERTY_PROJECT_ID),
                     properties.getProperty(PROPERTY_BUCKET)
