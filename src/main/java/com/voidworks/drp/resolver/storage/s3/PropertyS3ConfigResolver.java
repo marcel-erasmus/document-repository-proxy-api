@@ -1,13 +1,16 @@
 package com.voidworks.drp.resolver.storage.s3;
 
 import com.voidworks.drp.exception.storage.StorageProviderConfigurationException;
+import com.voidworks.drp.model.config.FirebaseConfig;
 import com.voidworks.drp.model.config.S3Config;
+import com.voidworks.drp.resolver.storage.StorageProviderConfigCache;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.Properties;
 
 @Slf4j
@@ -24,18 +27,27 @@ public class PropertyS3ConfigResolver implements S3ConfigResolver {
 
    @Override
    public S3Config resolve() {
+      Optional<S3Config> s3ConfigOptional = StorageProviderConfigCache.getS3Config(id);
+      if (s3ConfigOptional.isPresent()) {
+         return s3ConfigOptional.get();
+      }
+
       File file = new File(propertySource);
       try (InputStream inputStream = new FileInputStream(file)) {
          Properties properties = new Properties();
          properties.load(inputStream);
 
-         return new S3Config(
+         S3Config s3Config = new S3Config(
                  id,
                  properties.getProperty(PROPERTY_BUCKET),
                  properties.getProperty(PROPERTY_REGION),
                  properties.getProperty(PROPERTY_ACCESS_KEY_ID),
                  properties.getProperty(PROPERTY_SECRET_ACCESS_KEY)
          );
+
+         StorageProviderConfigCache.putStorageProviderConfig(s3Config);
+
+         return s3Config;
       } catch (Exception e) {
          log.error("Error in resolving storage provider config for Firebase! {}", e.getMessage(), e);
 
